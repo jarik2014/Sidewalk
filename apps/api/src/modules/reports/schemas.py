@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src.core.enums import ReportCategory, ReportStatus
+from src.modules.reports.media import validate_media_urls
 
 
 class CreateReportRequest(BaseModel):
@@ -17,11 +18,8 @@ class CreateReportRequest(BaseModel):
 
     @field_validator("media_urls")
     @classmethod
-    def validate_media_urls(cls, urls: list[str]) -> list[str]:
-        for url in urls:
-            if not (url.startswith("http://") or url.startswith("https://")):
-                raise ValueError(f"Invalid media URL: {url}")
-        return urls
+    def _validate_media_urls(cls, urls: list[str]) -> list[str]:
+        return validate_media_urls(urls) or []
 
     @model_validator(mode="after")
     def validate_location(self) -> "CreateReportRequest":
@@ -44,12 +42,8 @@ class UpdateReportRequest(BaseModel):
 
     @field_validator("media_urls")
     @classmethod
-    def validate_media_urls(cls, urls: list[str] | None) -> list[str] | None:
-        if urls is not None:
-            for url in urls:
-                if not (url.startswith("http://") or url.startswith("https://")):
-                    raise ValueError(f"Invalid media URL: {url}")
-        return urls
+    def _validate_media_urls(cls, urls: list[str] | None) -> list[str] | None:
+        return validate_media_urls(urls)
 
     @model_validator(mode="after")
     def validate_location(self) -> "UpdateReportRequest":

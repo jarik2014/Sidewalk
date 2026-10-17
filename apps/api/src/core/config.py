@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     LOGIN_LOCKOUT_MINUTES: int = 15
     LOG_LEVEL: str = "INFO"
 
+    # Media URLs attached to reports (#1174). An empty allow-list means "any
+    # https host" (previous behaviour, minus plain http); set it to the upload
+    # bucket / CDN hosts to make the API refuse everything else.
+    MEDIA_ALLOWED_HOSTS: list[str] = []
+    MEDIA_URL_MAX_LENGTH: int = 2048
+
     model_config = SettingsConfigDict(
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False, extra="ignore"
     )
