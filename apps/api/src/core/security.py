@@ -3,9 +3,15 @@ from typing import Any
 
 import bcrypt
 import jwt
+import structlog
 
 from src.core.config import get_settings
 from src.core.exceptions import InvalidTokenError
+
+log = structlog.get_logger(__name__)
+
+# RFC 6750: a 401 from a bearer-token protected endpoint says how to authenticate.
+BEARER_CHALLENGE = {"WWW-Authenticate": "Bearer"}
 
 
 def hash_password(plain: str) -> str:
@@ -31,9 +37,24 @@ def create_access_token(data: dict[str, Any], expires_minutes: int | None = None
 
 
 def decode_access_token(token: str) -> dict[str, Any]:
+    """Decode an access token, distinguishing "expired" from "forged".
+
+    Clients need the difference: an expired token means "refresh", an invalid one
+    means "sign in again". The underlying JWT error text is logged server-side and
+    never returned — it can describe our key material and is useless to clients
+    (#1159).
+    """
+
     settings = get_settings()
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
-        return payload
+        return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    except jwt.ExpiredSignatureError as exc:
+        log.info("auth.token.expired", reason=str(exc))
+        raise InvalidTokenError(
+            "Token has expired", code="token_expired", headers=BEARER_CHALLENGE
+        ) from exc
     except jwt.PyJWTError as exc:
-        raise InvalidTokenError(f"Invalid or expired token: {exc}") from exc
+        log.warning("auth.token.invalid", reason=str(exc), reason_type=type(exc).__name__)
+        raise InvalidTokenError(
+            "Token is invalid", code="token_invalid", headers=BEARER_CHALLENGE
+        ) from exc

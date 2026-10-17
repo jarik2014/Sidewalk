@@ -9,8 +9,16 @@ class AppError(Exception):
     status_code: int = 500
     code: str = "internal_error"
 
-    def __init__(self, message: str, *, code: str | None = None):
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        headers: dict[str, str] | None = None,
+    ):
         self.message = message
+        # Response headers the error must carry, e.g. WWW-Authenticate: Bearer.
+        self.headers = headers
         if code is not None:
             self.code = code
         super().__init__(message)

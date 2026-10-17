@@ -12,7 +12,7 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     content: dict[str, object] = {"code": exc.code, "message": exc.message}
     if isinstance(exc, ConflictError) and exc.field:
         content["field"] = exc.field
-    return JSONResponse(status_code=exc.status_code, content=content)
+    return JSONResponse(status_code=exc.status_code, content=content, headers=exc.headers)
 
 
 # Fallback codes for errors raised by Starlette/FastAPI rather than by AppError.
